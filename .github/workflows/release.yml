@@ -2,19 +2,15 @@ name: release
 
 on:
   push:
-    tags-ignore:
-      - "v1"
-      - "v1_k6"
-      - "v2"
-      - "v2_k6"
-      - "v3"
-      - "v3_k6"
-      - "v4"
-      - "v4_k6"
+    tags:
+      - "v*"
+  repository_dispatch:
+    types: [test_release]
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions: write-all
     outputs:
       is_tag: ${{ steps.check.outputs.is_tag }}
 
