@@ -10,7 +10,6 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    permissions: write-all
     outputs:
       is_tag: ${{ steps.check.outputs.is_tag }}
 
@@ -60,6 +59,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
