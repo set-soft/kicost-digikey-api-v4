@@ -1,5 +1,7 @@
-import os
 import logging
+import os
+import requests
+import time
 import kicost_digikey_api_v4.oauth.oauth2
 from kicost_digikey_api_v4.exceptions import DigikeyError
 from kicost_digikey_api_v4.v4.productinformation import (KeywordRequest, KeywordResponse, ProductDetails, DigiReelPricing,
@@ -7,6 +9,40 @@ from kicost_digikey_api_v4.v4.productinformation import (KeywordRequest, Keyword
 from kicost_digikey_api_v4.v4.productinformation.rest import ApiException
 
 logger = logging.getLogger(__name__)
+
+
+class ClientCredentialsToken:
+    def __init__(self, sandbox=False):
+        host = 'sandbox-api.digikey.com' if sandbox else 'api.digikey.com'
+        self.token_url = f'https://{host}/v1/oauth2/token'
+        self.client_id = os.environ['DIGIKEY_CLIENT_ID']
+        self.client_secret = os.environ['DIGIKEY_CLIENT_SECRET']
+        self._token = None
+        self._type = 'Bearer'
+        self._expires = 0
+
+    def _refresh_if_needed(self):
+        if self._token is None or time.time() >= self._expires:
+            r = requests.post(self.token_url, data={
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'grant_type': 'client_credentials',
+            })
+            r.raise_for_status()
+            j = r.json()
+            self._token = j['access_token']
+            self._type = j.get('token_type', 'Bearer')
+            self._expires = time.time() + int(j['expires_in']) - 60  # 1 min margin
+
+    @property
+    def access_token(self):
+        self._refresh_if_needed()
+        return self._token
+
+    @property
+    def authorization(self):
+        self._refresh_if_needed()
+        return self._type + ' ' + self._token
 
 
 class DigikeyApiWrapper(object):
@@ -46,14 +82,17 @@ class DigikeyApiWrapper(object):
         # configuration.api_key_prefix['X-DIGIKEY-Client-Id'] = 'Bearer'
 
         # Configure OAuth2 access token for authorization: oauth2AccessCodeSecurity
-        self._digikeyApiToken = kicost_digikey_api_v4.oauth.oauth2.TokenHandler(version=4, sandbox=self.sandbox).get_access_token()
+        # 3-legged version, only needed to modify something related to the user
+        # self._digikeyApiToken = kicost_digikey_api_v4.oauth.oauth2.TokenHandler(version=4, sandbox=self.sandbox).get_access_token()
+        # 2-legged version, eonugh to make queries
+        self._digikeyApiToken = ClientCredentialsToken(sandbox=self.sandbox)
         configuration.access_token = self._digikeyApiToken.access_token
 
         # create an instance of the API class
         self._api_instance = apiclass(module.ApiClient(configuration))
 
         # Populate reused ids
-        self.authorization = self._digikeyApiToken.get_authorization()
+        self.authorization = self._digikeyApiToken.authorization
         self.x_digikey_client_id = os.getenv('DIGIKEY_CLIENT_ID')
 
         self.wrapped_function = wrapped_function
