@@ -1,13 +1,12 @@
 #!/usr/bin/python3
-import re
 import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+_ = setuptools.setup(
     name="kicost_digikey_api_v4",
-    version="0.1.5",
+    version="0.1.6",
     author="Salvador E. Tropea",
     author_email="stropea@inti.gob.ar",
     license="GPL v3",
