@@ -175,6 +175,8 @@ class by_keyword(object):
             for p in r.product_variations:
                 tmp_results.append(PartSortWrapper(p, r.product_status.status, r))
         tmp_results.sort()
+        if len(tmp_results) == 0:
+            return None
         result.product = tmp_results[0].parent
         result.product.match = tmp_results[0].data
         if False:
